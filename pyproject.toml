@@ -1,0 +1,14 @@
+[project]
+name = "bird-photo-classifier-automation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "birder>=0.7.2",
+    "numpy>=2.5.2",
+    "pillow>=12.3.0",
+    "torch>=2.13.0",
+    "torchvision>=0.28.0",
+    "ultralytics>=8.4.126",
+]
