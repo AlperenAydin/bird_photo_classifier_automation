@@ -195,36 +195,19 @@ class BirdIdentifierPipeline:
 # Execution Example
 # ==========================================
 if __name__ == "__main__":
-    # Directory containing the images
-    input_directory = Path("File path here")
-
-    # Initialize model weights once
+    # Initialize once (loads weights into VRAM/RAM)
     pipeline = BirdIdentifierPipeline(
         yolo_model_name="yolov8n.pt",
         birder_model_name="mvit_v2_t_il-all",
         yolo_conf_threshold=0.30,
     )
 
-    # Find all .jpg and .jpeg files (case-insensitive)
-    valid_extensions = {".jpg", ".jpeg"}
-    image_files = sorted(
-        [p for p in input_directory.iterdir() if p.suffix.lower() in valid_extensions]
-    ) if input_directory.exists() else []
+    # Run inference on target image
+    image_path = "bird_photo.jpg"
 
-    if not image_files:
-        print(f"No JPG images found in directory: '{input_directory.resolve()}'")
-    else:
-        print(f"Found {len(image_files)} image(s) to process in '{input_directory.name}/'.\n")
-
-        for idx, img_path in enumerate(image_files, start=1):
-            print(f"========================================")
-            print(f"[{idx}/{len(image_files)}] Processing: {img_path.name}")
-            print(f"========================================")
-
-            try:
-                results = pipeline.process_image(img_path, top_k=3)
-                pipeline.print_results(results)
-            except Exception as e:
-                print(f"Failed to process {img_path.name}: {e}")
-            
-            print()  # Empty line between images
+    # Replace with an actual file to test
+    try:
+        results = pipeline.process_image(image_path, top_k=3)
+        pipeline.print_results(results)
+    except FileNotFoundError:
+        print(f"File not found: '{image_path}'. Place a test photo to run.")
