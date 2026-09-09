@@ -4,7 +4,9 @@ from bird_identifier_pipeline import BirdIdentifierPipeline, BirdDetectionResult
 
 def read_exif_data(file_path: str):
     with ExifToolHelper() as et: 
-        tags = et.get_tags()
+        tags_list = et.get_tags([file_path], ["IPTC:Keywords", "XMP:HierarchicalSubject"])
+    tags = {}
+    [ tags.update(entry) for entry in tags_list]
     return tags
 
 def write_exif_data(file_path: str, tags: dict):    
@@ -38,17 +40,20 @@ def main():
         yolo_conf_threshold=0.30,
     )
     
-        # Run inference on target image
-    input_directory = Path("/mnt/c/Users/aydin/Desktop/photos/Lyon_052026/JPG/")
+    # Run inference on target image
+    input_directory = Path("/mnt/c/Users/aydin/Desktop/photos/Lyon_052026/JPG")
 
 
-# Find all .jpg and .jpeg files (case-insensitive)
+    # Find all .jpg and .jpeg files (case-insensitive)
     valid_extensions = {".jpg", ".jpeg"}
     image_files = sorted(
         [p for p in input_directory.iterdir() if p.suffix.lower() in valid_extensions]
     ) if input_directory.exists() else []
     
-    for file_path in image_files: 
+    for file_path in image_files:
+        tags = read_exif_data(file_path)
+        if tags["XMP:HierarchicalSubject"]:
+            print(f"{file_path} already tagged, skipping")
         write_species_tag(pipeline, file_path)
 
 
