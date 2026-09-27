@@ -1,0 +1,13 @@
+services:
+  immich-exif-tagger:
+    image: ghcr.io/AlperenAydin/bird_photo_classifier_automation:latest
+    restart: unless-stopped
+    environment:
+      - IMMICH_URL=http://immich-server:2283/api
+      - IMMICH_API_KEY=your_api_key_here
+      - CHECK_INTERVAL_SECONDS=300
+    volumes:
+      # Mount the Immich library read/write so the tagger can modify image EXIF directly
+      - /path/to/immich/upload/library:/path/to/immich/upload/library:rw
+    networks:
+      - default
