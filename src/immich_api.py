@@ -51,7 +51,7 @@ def trigger_immich_metadata_refresh(asset_ids: list[str]):
         "assetIds": asset_ids,
         "name": "refresh-metadata"
     }
-    resp = requests.put(url, headers=HEADERS, json=payload)
+    resp = requests.post(url, headers=HEADERS, json=payload)
     resp.raise_for_status()
     
 def main():
