@@ -4,6 +4,8 @@ import os
 IMMICH_URL = os.getenv("IMMICH_URL", "http://immich-server:2283/api").rstrip("/")
 IMMICH_API_KEY = os.getenv("IMMICH_API_KEY", "")
 
+IMMICH_BATCH_SIZE = os.getenv("IMMICH_BATCH_SIZE", "500",)
+
 HEADERS = {
     "x-api-key": IMMICH_API_KEY,
     "Accept": "application/json",
@@ -24,6 +26,7 @@ def get_untagged_assets():
     url = f"{IMMICH_URL}/search/metadata"
     # Query Immich for images (customize payload to filter specific tags/albums if needed)
     payload = {
+        "size": int(IMMICH_BATCH_SIZE),
         "filter": {
             "type": {
                 "eq": "IMAGE"
