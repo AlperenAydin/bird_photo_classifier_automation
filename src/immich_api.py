@@ -9,6 +9,13 @@ HEADERS = {
     "Accept": "application/json",
 }
 
+def verify_environment_variables():
+    if not IMMICH_URL:
+        raise ValueError("IMMICH_URL environment variable is required.")
+    if not IMMICH_API_KEY:
+        raise ValueError("IMMICH_API_KEY environment variable is required.")
+    
+
 def get_untagged_assets():
     """
     Fetches assets from Immich. 
