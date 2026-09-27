@@ -37,7 +37,7 @@ def get_untagged_assets():
     for asset in assets:
         exif = asset.get("exifInfo") or {}
         # Example check: add asset if your target field/description is missing
-        if not exif.get("description"):
+        if not exif.get("XMP:HierarchicalSubject"):
             untagged.append(asset)
             
     return untagged
