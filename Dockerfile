@@ -2,18 +2,22 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 
-# Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Copy dependency files first for caching
+# Install runtime system packages:
+# - exiftool: required by pyexiftool
+# - libglib2.0-0, libgomp1: required by OpenCV headless and PyTorch/C++ extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    exiftool \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml uv.lock* ./
 
-# Install project dependencies
 RUN uv sync --frozen --no-install-project --no-dev
 
-# Copy application source code
 COPY . .
 
-# Run application via uv
 CMD ["uv", "run", "python", "src/immich_exif_tagger.py"]
