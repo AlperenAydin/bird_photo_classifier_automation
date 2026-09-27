@@ -65,6 +65,7 @@ def main():
     logging.info(f"Starting EXIF tagger service. Interval: {CHECK_INTERVAL}s")
     while True:
         run_sync_cycle(pipeline)
+        logging.info(f"Cycle done, will wait for {CHECK_INTERVAL}s")
         time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
