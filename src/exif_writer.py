@@ -2,6 +2,25 @@ from exiftool import ExifToolHelper
 from pathlib import Path
 from bird_identifier_pipeline import BirdIdentifierPipeline, BirdDetectionResult
 
+import argparse
+from pathlib import Path
+import sys
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Extract and process a file path passed via command-line flags."
+    )
+    parser.add_argument(
+        "-f",
+        "--file",
+        dest="file_path",
+        type=Path,
+        required=True,
+        help="Path to the target file.",
+    )
+    return parser.parse_args()
+
 def read_exif_data(file_path: str):
     with ExifToolHelper() as et: 
         tags_list = et.get_tags([file_path], ["IPTC:Keywords", "XMP:HierarchicalSubject"])
@@ -41,7 +60,13 @@ def main():
     )
     
     # Run inference on target image
-    input_directory = Path("/mnt/c/Users/aydin/Pictures/sihltal_27082026/JPG")
+    args = parse_args()
+    input_directory: Path = args.file_path.resolve()
+
+    # Validate file existence and type
+    if not input_directory.exists():
+        print(f"Error: Path '{input_directory}' does not exist.", file=sys.stderr)
+        sys.exit(1)
 
     # Find all .jpg and .jpeg files (case-insensitive)
     valid_extensions = {".jpg", ".jpeg"}
