@@ -1,5 +1,5 @@
 services:
-  immich-exif-tagger:
+  immich_exif_tagger:
     image: ghcr.io/AlperenAydin/bird_photo_classifier_automation:latest
     restart: unless-stopped
     environment:
