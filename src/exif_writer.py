@@ -41,8 +41,7 @@ def main():
     )
     
     # Run inference on target image
-    input_directory = Path("/mnt/c/Users/aydin/Desktop/photos/Lyon_052026/JPG")
-
+    input_directory = Path("/mnt/c/Users/aydin/Pictures/sihltal_27082026/JPG")
 
     # Find all .jpg and .jpeg files (case-insensitive)
     valid_extensions = {".jpg", ".jpeg"}
@@ -52,8 +51,9 @@ def main():
     
     for file_path in image_files:
         tags = read_exif_data(file_path)
-        if tags["XMP:HierarchicalSubject"]:
+        if "XMP:HierarchicalSubject" in tags:
             print(f"{file_path} already tagged, skipping")
+            continue
         write_species_tag(pipeline, file_path)
 
 
