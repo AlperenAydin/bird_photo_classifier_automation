@@ -5,13 +5,15 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install runtime system packages:
-# - exiftool: required by pyexiftool
-# - libglib2.0-0, libgomp1: required by OpenCV headless and PyTorch/C++ extensions
+# Install required system dependencies for OpenCV and image processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    exiftool \
+    libgl1 \
     libglib2.0-0 \
-    libgomp1 \
+    libxcb1 \
+    libx11-xcb1 \
+    libxcb-render0 \
+    libxcb-shape0 \
+    libxcb-xfixes0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock* ./
