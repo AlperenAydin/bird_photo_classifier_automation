@@ -47,7 +47,7 @@ def write_species_tag(pipeline: BirdIdentifierPipeline, file_path: str):
         if confidence < 0.7:
             continue   
         tags["IPTC:Keywords"] = f"species:{r.top_species[0][0].lower().replace(' ',"_")}"
-        tags["XMP:HierarchicalSubject"] = f"Nature|Species|{r.top_species[0][0]}"
+        tags["XMP:HierarchicalSubject"] = f"Nature|Species|{r.top_species[0][0].lower()}"
     if tags:
         write_exif_data(file_path, tags)
     
