@@ -24,23 +24,21 @@ def get_untagged_assets():
     url = f"{IMMICH_URL}/search/metadata"
     # Query Immich for images (customize payload to filter specific tags/albums if needed)
     payload = {
-        "type": "IMAGE",
-        "isVisible": True,
+        "filter": {
+            "type": {
+                "eq": "IMAGE"
+            },
+            "hasTags": {
+                "eq": False
+                },
+        },
     }
     
     response = requests.post(url, headers=HEADERS, json=payload)
     response.raise_for_status()
     assets = response.json().get("assets", {}).get("items", [])
-    
-    # Filter for assets that lack your target tag or metadata
-    untagged = []
-    for asset in assets:
-        exif = asset.get("exifInfo") or {}
-        # Example check: add asset if your target field/description is missing
-        if not exif.get("XMP:HierarchicalSubject"):
-            untagged.append(asset)
             
-    return untagged
+    return assets
 
 def trigger_immich_metadata_refresh(asset_ids: list[str]):
     """Notifies Immich to re-read updated EXIF metadata from the disk."""
@@ -58,9 +56,9 @@ def main():
     assets = get_untagged_assets()
     print(f"{assets[0]}")
     print(f"{assets[0].get("exifInfo")}")
+    print(f"{assets[0].get("tags")}")
     print(len(assets))
     
-    trigger_immich_metadata_refresh(assets[:1])
             
 if __name__ == "__main__":
     main()
