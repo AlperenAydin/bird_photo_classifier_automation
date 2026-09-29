@@ -147,6 +147,7 @@ def main():
     logging.info(f"Starting EXIF tagger service. Interval: {CHECK_INTERVAL}s")
     while True:
         run_local_cycle(pipeline)
+        run_remote_cycle()
         logging.info(f"Cycle done, will wait for {CHECK_INTERVAL}s")
         time.sleep(CHECK_INTERVAL)
 
