@@ -2,7 +2,7 @@ import os
 import time
 import immich_api
 from bird_identifier_pipeline import BirdIdentifierPipeline
-from llm_identifier_pipeline import LLMIdentifierPipeline, 
+from llm_identifier_pipeline import LLMIdentifierPipeline
 import exif_writer
 import logging
 import sys

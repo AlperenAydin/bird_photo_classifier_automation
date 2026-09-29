@@ -6,8 +6,10 @@ services:
       - IMMICH_URL=http://immich-server:2283/api
       - IMMICH_API_KEY=your_api_key_here
       - CHECK_INTERVAL_SECONDS=300
+      - GEMINI_API_KEY=your_api_key_here
+      - GEMINI_MODEL=models/gemini-3.5-flash-lite
     volumes:
       # Mount the Immich library read/write so the tagger can modify image EXIF directly
-      - /path/to/immich/upload/library:/path/to/immich/upload/library:rw
+      - ${UPLOAD_LOCATION}:/data
     networks:
       - default
