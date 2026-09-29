@@ -85,9 +85,13 @@ class BirdIdentifierPipeline:
 
         # Construct index-to-label mapping
         if isinstance(model_info.class_to_idx, list):
-            self._idx_to_class = {i: name for i, name in enumerate(model_info.class_to_idx)}
+            self._idx_to_class = {
+                i: name for i, name in enumerate(model_info.class_to_idx)
+            }
         else:
-            self._idx_to_class = {idx: label for label, idx in model_info.class_to_idx.items()}
+            self._idx_to_class = {
+                idx: label for label, idx in model_info.class_to_idx.items()
+            }
 
     def _load_image(self, image_source: Union[str, Path, Image.Image]) -> Image.Image:
         """Ensures the incoming input is normalized to an RGB PIL Image."""
@@ -126,7 +130,9 @@ class BirdIdentifierPipeline:
         probs = probabilities[0]
 
         top_indices = np.argsort(probs)[::-1][:top_k]
-        return [(self._idx_to_class[idx], float(probs[idx] * 100)) for idx in top_indices]
+        return [
+            (self._idx_to_class[idx], float(probs[idx] * 100)) for idx in top_indices
+        ]
 
     # ==========================================
     # Public API Methods
@@ -187,7 +193,9 @@ class BirdIdentifierPipeline:
                 if res.detection_confidence > 0
                 else "Full-image fallback"
             )
-            print(f"\n[Bird #{idx}] BBox: {res.bbox} | Detection Confidence: {det_label}")
+            print(
+                f"\n[Bird #{idx}] BBox: {res.bbox} | Detection Confidence: {det_label}"
+            )
             for rank, (species, prob) in enumerate(res.top_species, start=1):
                 print(f"  {rank}. {species}: {prob:.2f}%")
 
@@ -206,6 +214,7 @@ def parse_args() -> argparse.Namespace:
     )
     return parser.parse_args()
 
+
 # ==========================================
 # Execution Example
 # ==========================================
@@ -213,8 +222,7 @@ if __name__ == "__main__":
     # Run inference on target image
     args = parse_args()
     image_path: Path = args.image_path.resolve()
-    
-    
+
     # Initialize once (loads weights into VRAM/RAM)
     pipeline = BirdIdentifierPipeline(
         yolo_model_name="yolov8n.pt",
