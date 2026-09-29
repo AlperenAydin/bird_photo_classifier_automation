@@ -21,7 +21,7 @@ def get_all_tags():
 
 def delete_tag(tagId: str): 
     url = f"{IMMICH_URL}/tags/{tagId}"
-    response = requests.delete(url, headers=HEADERS)
+    requests.delete(url, headers=HEADERS)
     
     
 def main():
