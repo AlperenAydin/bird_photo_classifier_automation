@@ -67,7 +67,7 @@ class LLMIdentifierPipeline:
         if not mime_type:
             mime_type = "image/jpeg"
 
-        image_bytes = image_path.read_bytes()
+        image_bytes = Path(image_path).read_bytes()
         return [
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
             self.prompt,
