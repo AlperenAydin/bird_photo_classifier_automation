@@ -2,12 +2,22 @@ import os
 import time
 import immich_api
 from bird_identifier_pipeline import BirdIdentifierPipeline
+from llm_identifier_pipeline import LLMIdentifierPipeline, 
 import exif_writer
 import logging
 import sys
 
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_SECONDS", "300"))
 OVERWRITE_EXIF_DATA = os.getenv("IMMICH_TAGGER_OVERWRITE_TAGS", "False") == True
+
+DETECTION_CONFIDENCE = int(os.getenv("BIRD_DETECTION_CONFIDENCE", 80))
+SPECIES_IDENTIFICATION_CONFIDENCE = int(
+    os.getenv("BIRD_SPECIES_IDENTIFICATION_CONFIDENCE", 80)
+)
+
+
+API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -16,24 +26,67 @@ logging.basicConfig(
 )
 
 
-def identify_and_write_exif(pipeline: BirdIdentifierPipeline, file_path: str):
-    """
-    Placeholder for your custom identifier & EXIF modification logic.
-    Modify file_path in place or perform API-based tagging.
-    """
+def process_images_locally(pipeline: BirdIdentifierPipeline, file_path: str):
     if not OVERWRITE_EXIF_DATA:
         tags = exif_writer.read_exif_data(file_path)
         if "XMP:HierarchicalSubject" in tags:
             logging.info(f"{file_path} already tagged, skipping")
             return
-    exif_writer.write_species_tag(pipeline, file_path)
+
+    results = pipeline.process_image(file_path, top_k=3)
+    tags = {"IPTC:Keywords": [], "XMP:HierarchicalSubject": []}
+    
+    for r in results:
+        if r.detection_confidence * 100 < DETECTION_CONFIDENCE:
+            continue
+        if r.top_species[0][1] < SPECIES_IDENTIFICATION_CONFIDENCE:
+            continue
+
+        species_name = r.top_species[0][0].lower()
+        tags["IPTC:Keywords"].append(f"species:{species_name.replace(' ',"_")}")
+        tags["XMP:HierarchicalSubject"].append(
+            f"Nature|Species|{species_name.capitalize()}"
+        )
+
+    if len(tags["IPTC:Keywords"]) == 0:
+        tags = {
+            "IPTC:Keywords": "species:unidentified_locally",
+            "XMP:HierarchicalSubject": "Nature|Species|unidentified_locally",
+        }
+
+    exif_writer.write_exif_data(file_path, tags)
 
 
-def run_sync_cycle(pipeline: BirdIdentifierPipeline):
+def process_images_remotely(pipeline: LLMIdentifierPipeline, file_path: str):
+    if not OVERWRITE_EXIF_DATA:
+        tags = exif_writer.read_exif_data(file_path)
+        if "XMP:HierarchicalSubject" in tags:
+            logging.info(f"{file_path} already tagged, skipping")
+            return
+
+    results = pipeline.identify_species(file_path)
+    if not results.is_organism:
+        exif_writer.write_exif_data(
+            file_path,
+            tags={
+                "IPTC:Keywords": "species:no_animal",
+                "XMP:HierarchicalSubject": "Nature|Species|No animal",
+            },
+        )
+        return
+
+    species_name = results.common_name.lower()
+    tags = {
+        "IPTC:Keywords": f"species:{species_name.replace(' ',"_")}",
+        "XMP:HierarchicalSubject": f"Nature|Species|{species_name.capitalize()}",
+    }
+
+
+def run_local_cycle(pipeline: BirdIdentifierPipeline):
     logging.info("Checking for untagged assets...")
     try:
         untagged_assets = immich_api.get_untagged_assets()
-        logging.info(f"Found {len(untagged_assets)} candidate asset(s).")
+        logging.info(f"Found {len(untagged_assets)} untagged candidate asset(s).")
 
         updated_ids = []
         for asset in untagged_assets:
@@ -42,7 +95,7 @@ def run_sync_cycle(pipeline: BirdIdentifierPipeline):
 
             # If the library is mounted into the container at the same path:
             if original_path and os.path.exists(original_path):
-                identify_and_write_exif(pipeline, original_path)
+                process_images_locally(pipeline, original_path)
                 updated_ids.append(asset_id)
             else:
                 logging.info(f"File path not accessible locally: {original_path}")
@@ -50,7 +103,32 @@ def run_sync_cycle(pipeline: BirdIdentifierPipeline):
         if updated_ids:
             logging.info(f"Refreshing Immich metadata for {len(updated_ids)} assets...")
             immich_api.trigger_immich_metadata_refresh(updated_ids)
+    except Exception as e:
+        logging.info(f"Error during execution: {e}")
+        
+        
+def run_remote_cycle():
+    pipeline = LLMIdentifierPipeline(API_KEY, GEMINI_MODEL)
+    logging.info("Checking for unidentified assets...")
+    try:
+        unidentified_tagged_assets = immich_api.get_unidentified_tagged_assets()
+        logging.info(f"Found {len(unidentified_tagged_assets)} previously untagged candidate asset(s).")
 
+        updated_ids = []
+        for asset in unidentified_tagged_assets:
+            asset_id = asset["id"]
+            original_path = asset.get("originalPath")
+
+            # If the library is mounted into the container at the same path:
+            if original_path and os.path.exists(original_path):
+                process_images_remotely(pipeline, original_path)
+                updated_ids.append(asset_id)
+            else:
+                logging.info(f"File path not accessible locally: {original_path}")
+
+        if updated_ids:
+            logging.info(f"Refreshing Immich metadata for {len(updated_ids)} previously unidentified assets...")
+            immich_api.trigger_immich_metadata_refresh(updated_ids)
     except Exception as e:
         logging.info(f"Error during execution: {e}")
 
@@ -68,7 +146,7 @@ def main():
 
     logging.info(f"Starting EXIF tagger service. Interval: {CHECK_INTERVAL}s")
     while True:
-        run_sync_cycle(pipeline)
+        run_local_cycle(pipeline)
         logging.info(f"Cycle done, will wait for {CHECK_INTERVAL}s")
         time.sleep(CHECK_INTERVAL)
 

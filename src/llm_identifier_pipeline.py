@@ -22,7 +22,6 @@ from pydantic import BaseModel, Field
 API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL")
 
-
 class SpeciesIdentification(BaseModel):
     is_organism: bool = Field(
         description="Whether a living organism or identifiable animal/plant is present."

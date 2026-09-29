@@ -24,8 +24,7 @@ def verify_environment_variables():
 
 def get_untagged_assets():
     """
-    Fetches assets from Immich.
-    You can filter by metadata/tags or check if specific EXIF fields are present.
+    Fetches untagged assets from Immich.
     """
     url = f"{IMMICH_URL}/search/metadata"
     # Query Immich for images (customize payload to filter specific tags/albums if needed)
@@ -34,6 +33,38 @@ def get_untagged_assets():
         "filter": {
             "type": {"eq": "IMAGE"},
             "hasTags": {"eq": False},
+        },
+    }
+
+    response = requests.post(url, headers=HEADERS, json=payload)
+    response.raise_for_status()
+    assets = response.json().get("assets", {}).get("items", [])
+
+    return assets
+
+
+def get_unidentified_tagged_assets():
+    """
+    Fetches assets with the "Nature|Species|unidentified_locally" from Immich.
+    You can filter by metadata/tags or check if specific EXIF fields are present.
+    """
+    # Get tags and find the relevant tag
+    response = requests.get(f"{IMMICH_URL}/tags", headers=HEADERS)
+    tags = response.json()
+    tags = list(
+        filter(lambda t: t["value"] == "Nature|Species|unidentified_locally", tags)
+    )
+    if len(tags) == 0:
+        return []
+    unidentified_tag = tags[0]
+
+    # Query Immich for images (customize payload to filter specific tags/albums if needed)
+    url = f"{IMMICH_URL}/search/metadata"
+    payload = {
+        "size": int(IMMICH_BATCH_SIZE),
+        "filter": {
+            "type": {"eq": "IMAGE"},
+            "tagIds": {"any": [unidentified_tag["id"]]},
         },
     }
 
@@ -56,10 +87,10 @@ def trigger_immich_metadata_refresh(asset_ids: list[str]):
 
 def main():
     assets = get_untagged_assets()
-    print(f"{assets[0]}")
-    print(f"{assets[0].get("exifInfo")}")
-    print(f"{assets[0].get("tags")}")
     print(len(assets))
+
+    tag = get_unidentified_tagged_assets()
+    print(len(tag))
 
 
 if __name__ == "__main__":
