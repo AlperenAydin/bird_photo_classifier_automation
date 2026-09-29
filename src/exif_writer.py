@@ -5,7 +5,10 @@ from bird_identifier_pipeline import BirdIdentifierPipeline, BirdDetectionResult
 import argparse
 from pathlib import Path
 import sys
+import os
 
+DETECTION_CONFIDENCE = int(os.getenv("BIRD_DETECTION_CONFIDENCE", 80))
+SPECIES_IDENTIFICATION_CONFIDENCE = int(os.getenv("BIRD_SPECIES_IDENTIFICATION_CONFIDENCE", 80))
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -40,16 +43,19 @@ def write_exif_data(file_path: str, tags: dict):
 def write_species_tag(pipeline: BirdIdentifierPipeline, file_path: str):
     
     results = pipeline.process_image(file_path, top_k=3)
-    tags = {"IPTC:Keywords": "species:unknown", 
-            "XMP:HierarchicalSubject" : "Nature|Species|unknown"} 
+    tags = {"IPTC:Keywords": [], 
+            "XMP:HierarchicalSubject" : []} 
     for r in results:
-        confidence = r.detection_confidence**0.2 * (r.top_species[0][1]/100)**0.8
-        if confidence < 0.7:
-            continue   
-        tags["IPTC:Keywords"] = f"species:{r.top_species[0][0].lower().replace(' ',"_")}"
-        tags["XMP:HierarchicalSubject"] = f"Nature|Species|{r.top_species[0][0]}"
-    if tags:
-        write_exif_data(file_path, tags)
+        if r.detection_confidence < DETECTION_CONFIDENCE or r.top_species[0][1] < SPECIES_IDENTIFICATION_CONFIDENCE:
+            continue
+        tags["IPTC:Keywords"].append(f"species:{r.top_species[0][0].lower().replace(' ',"_")}")
+        tags["XMP:HierarchicalSubject"].append(f"Nature|Species|{r.top_species[0][0].lower().capitalize()}")
+    
+    if len(tags["IPTC:Keywords"]) == 0:
+        tags = {"IPTC:Keywords": "species:unidentified_locally", 
+                "XMP:HierarchicalSubject" : "Nature|Species|unidentified_locally"}
+        
+    write_exif_data(file_path, tags)
     
 def main():
     # Initialize once (loads weights into VRAM/RAM)

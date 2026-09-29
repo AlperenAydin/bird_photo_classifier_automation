@@ -7,6 +7,7 @@ import logging
 import sys
 
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_SECONDS", "300"))
+OVERWRITE_EXIF_DATA = (os.getenv("IMMICH_TAGGER_OVERWRITE_TAGS", "False") == True) 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,10 +20,11 @@ def identify_and_write_exif(pipeline: BirdIdentifierPipeline, file_path: str):
     Placeholder for your custom identifier & EXIF modification logic.
     Modify file_path in place or perform API-based tagging.
     """
-    tags = exif_writer.read_exif_data(file_path)
-    if "XMP:HierarchicalSubject" in tags:
-        logging.info(f"{file_path} already tagged, skipping")
-        return
+    if not OVERWRITE_EXIF_DATA:
+        tags = exif_writer.read_exif_data(file_path)
+        if "XMP:HierarchicalSubject" in tags:
+            logging.info(f"{file_path} already tagged, skipping")
+            return
     exif_writer.write_species_tag(pipeline, file_path)
 
 
