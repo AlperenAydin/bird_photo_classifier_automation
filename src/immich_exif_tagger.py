@@ -9,6 +9,7 @@ import sys
 
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL_SECONDS", "300"))
 OVERWRITE_EXIF_DATA = os.getenv("IMMICH_TAGGER_OVERWRITE_TAGS", "False") == "True"
+USE_REMOTE_IDENTIFICATION = os.getenv("USE_REMOTE_IDENTIFICATION", "False") == "True"
 
 DETECTION_CONFIDENCE = int(os.getenv("BIRD_DETECTION_CONFIDENCE", 80))
 SPECIES_IDENTIFICATION_CONFIDENCE = int(
@@ -65,6 +66,7 @@ def process_images_remotely(pipeline: LLMIdentifierPipeline, file_path: str):
             return
 
     results = pipeline.identify_species(file_path)
+    print(results)
     # If there is no creature, we should tag it as such.
     if not results.is_organism:
         exif_writer.write_exif_data(
@@ -76,7 +78,7 @@ def process_images_remotely(pipeline: LLMIdentifierPipeline, file_path: str):
         )
         return
     # If the confidence level is low, mark it as unidentified
-    if results.confidence < SPECIES_IDENTIFICATION_CONFIDENCE:
+    if int(results.confidence) < SPECIES_IDENTIFICATION_CONFIDENCE:
         exif_writer.write_exif_data(
             file_path,
             tags={
@@ -126,9 +128,10 @@ def run_remote_cycle():
         logging.info(
             f"Found {len(unidentified_tagged_assets)} previously unidentified candidate asset(s)."
         )
-
+        max_assets_to_identify=min(10, len(unidentified_tagged_assets))
+        
         updated_ids = []
-        for asset in unidentified_tagged_assets:
+        for asset in unidentified_tagged_assets[max_assets_to_identify]:
             asset_id = asset["id"]
             original_path = asset.get("originalPath")
 
@@ -162,7 +165,8 @@ def main():
     logging.info(f"Starting EXIF tagger service. Interval: {CHECK_INTERVAL}s")
     while True:
         run_local_cycle(pipeline)
-        run_remote_cycle()
+        if USE_REMOTE_IDENTIFICATION:
+            run_remote_cycle()
         logging.info(f"Cycle done, will wait for {CHECK_INTERVAL}s")
         time.sleep(CHECK_INTERVAL)
 
