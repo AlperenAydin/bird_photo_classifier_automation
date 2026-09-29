@@ -35,7 +35,7 @@ def process_images_locally(pipeline: BirdIdentifierPipeline, file_path: str):
 
     results = pipeline.process_image(file_path, top_k=3)
     tags = {"IPTC:Keywords": [], "XMP:HierarchicalSubject": []}
-    
+
     for r in results:
         if r.detection_confidence * 100 < DETECTION_CONFIDENCE:
             continue
@@ -65,12 +65,23 @@ def process_images_remotely(pipeline: LLMIdentifierPipeline, file_path: str):
             return
 
     results = pipeline.identify_species(file_path)
+    # If there is no creature, we should tag it as such.
     if not results.is_organism:
         exif_writer.write_exif_data(
             file_path,
             tags={
                 "IPTC:Keywords": "species:no_animal",
                 "XMP:HierarchicalSubject": "Nature|Species|No animal",
+            },
+        )
+        return
+    # If the confidence level is low, mark it as unidentified
+    if results.confidence < SPECIES_IDENTIFICATION_CONFIDENCE:
+        exif_writer.write_exif_data(
+            file_path,
+            tags={
+                "IPTC:Keywords": "species:unidentified_remotely",
+                "XMP:HierarchicalSubject": "Nature|Species|unidentified_remotely",
             },
         )
         return
@@ -105,14 +116,16 @@ def run_local_cycle(pipeline: BirdIdentifierPipeline):
             immich_api.trigger_immich_metadata_refresh(updated_ids)
     except Exception as e:
         logging.info(f"Error during execution: {e}")
-        
-        
+
+
 def run_remote_cycle():
     pipeline = LLMIdentifierPipeline(API_KEY, GEMINI_MODEL)
     logging.info("Checking for unidentified assets...")
     try:
         unidentified_tagged_assets = immich_api.get_unidentified_tagged_assets()
-        logging.info(f"Found {len(unidentified_tagged_assets)} previously unidentified candidate asset(s).")
+        logging.info(
+            f"Found {len(unidentified_tagged_assets)} previously unidentified candidate asset(s)."
+        )
 
         updated_ids = []
         for asset in unidentified_tagged_assets:
@@ -127,7 +140,9 @@ def run_remote_cycle():
                 logging.info(f"File path not accessible locally: {original_path}")
 
         if updated_ids:
-            logging.info(f"Refreshing Immich metadata for {len(updated_ids)} previously unidentified assets...")
+            logging.info(
+                f"Refreshing Immich metadata for {len(updated_ids)} previously unidentified assets..."
+            )
             immich_api.trigger_immich_metadata_refresh(updated_ids)
     except Exception as e:
         logging.info(f"Error during execution: {e}")
