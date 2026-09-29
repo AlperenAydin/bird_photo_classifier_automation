@@ -52,7 +52,7 @@ def get_unidentified_tagged_assets():
     response = requests.get(f"{IMMICH_URL}/tags", headers=HEADERS)
     tags = response.json()
     tags = list(
-        filter(lambda t: t["value"] == "Nature|Species|unidentified_locally", tags)
+        filter(lambda t: t["value"] == "Nature/Species/unidentified_locally", tags)
     )
     if len(tags) == 0:
         return []
