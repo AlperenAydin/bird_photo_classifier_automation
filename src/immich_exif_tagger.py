@@ -112,7 +112,7 @@ def run_remote_cycle():
     logging.info("Checking for unidentified assets...")
     try:
         unidentified_tagged_assets = immich_api.get_unidentified_tagged_assets()
-        logging.info(f"Found {len(unidentified_tagged_assets)} previously untagged candidate asset(s).")
+        logging.info(f"Found {len(unidentified_tagged_assets)} previously unidentified candidate asset(s).")
 
         updated_ids = []
         for asset in unidentified_tagged_assets:
