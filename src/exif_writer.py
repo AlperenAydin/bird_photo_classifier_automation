@@ -16,11 +16,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "-f",
-        "--file",
-        dest="file_path",
+        "--folder",
+        dest="folder_path",
         type=Path,
         required=True,
-        help="Path to the target file.",
+        help="Path to the target folder.",
     )
     return parser.parse_args()
 
@@ -67,18 +67,18 @@ def main():
     
     # Run inference on target image
     args = parse_args()
-    input_directory: Path = args.file_path.resolve()
+    folder_path: Path = args.folder_path.resolve()
 
     # Validate file existence and type
-    if not input_directory.exists():
-        print(f"Error: Path '{input_directory}' does not exist.", file=sys.stderr)
+    if not folder_path.exists():
+        print(f"Error: Path '{folder_path}' does not exist.", file=sys.stderr)
         sys.exit(1)
 
     # Find all .jpg and .jpeg files (case-insensitive)
     valid_extensions = {".jpg", ".jpeg"}
     image_files = sorted(
-        [p for p in input_directory.iterdir() if p.suffix.lower() in valid_extensions]
-    ) if input_directory.exists() else []
+        [p for p in folder_path.iterdir() if p.suffix.lower() in valid_extensions]
+    ) if folder_path.exists() else []
     
     for file_path in image_files:
         tags = read_exif_data(file_path)

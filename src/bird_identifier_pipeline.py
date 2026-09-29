@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -191,19 +192,35 @@ class BirdIdentifierPipeline:
                 print(f"  {rank}. {species}: {prob:.2f}%")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Extract and process a file path passed via command-line flags."
+    )
+    parser.add_argument(
+        "-f",
+        "--file",
+        dest="image_path",
+        type=Path,
+        required=True,
+        help="Path to the target file.",
+    )
+    return parser.parse_args()
+
 # ==========================================
 # Execution Example
 # ==========================================
 if __name__ == "__main__":
+    # Run inference on target image
+    args = parse_args()
+    image_path: Path = args.image_path.resolve()
+    
+    
     # Initialize once (loads weights into VRAM/RAM)
     pipeline = BirdIdentifierPipeline(
         yolo_model_name="yolov8n.pt",
         birder_model_name="mvit_v2_t_il-all",
         yolo_conf_threshold=0.30,
     )
-
-    # Run inference on target image
-    image_path = "bird_photo.jpg"
 
     # Replace with an actual file to test
     try:
