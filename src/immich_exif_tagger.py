@@ -121,8 +121,7 @@ def run_local_cycle(pipeline: BirdIdentifierPipeline):
         logging.error(f"Error during execution: {e}", exc_info=True)
 
 
-def run_remote_cycle():
-    pipeline = LLMIdentifierPipeline(API_KEY, GEMINI_MODEL)
+def run_remote_cycle(pipeline: LLMIdentifierPipeline):
     logging.info("Checking for unidentified assets...")
     try:
         unidentified_tagged_assets = immich_api.get_unidentified_tagged_assets()
@@ -157,17 +156,20 @@ def main():
     immich_api.verify_environment_variables()
 
     # Initialize once (loads weights into VRAM/RAM)
-    pipeline = BirdIdentifierPipeline(
+    local_pipeline = BirdIdentifierPipeline(
         yolo_model_name="yolov8n.pt",
         birder_model_name="mvit_v2_t_il-all",
         yolo_conf_threshold=0.30,
     )
 
+    # Set-up the LLM Pipeline
+    remote_pipeline = LLMIdentifierPipeline(API_KEY, GEMINI_MODEL)
+
     logging.info(f"Starting EXIF tagger service. Interval: {CHECK_INTERVAL}s")
     while True:
-        run_local_cycle(pipeline)
+        run_local_cycle(local_pipeline)
         if USE_REMOTE_IDENTIFICATION:
-            run_remote_cycle()
+            run_remote_cycle(remote_pipeline)
         logging.info(f"Cycle done, will wait for {CHECK_INTERVAL}s")
         time.sleep(CHECK_INTERVAL)
 

@@ -8,10 +8,9 @@
 # ///
 
 import argparse
-from functools import lru_cache
-import json
 import mimetypes
 import os
+import time
 from pathlib import Path
 import sys
 
@@ -45,22 +44,41 @@ class SpeciesIdentification(BaseModel):
 
 
 class LLMIdentifierPipeline:
-    def __init__(self, gemini_api_key: str, gemini_model: str):
+
+    def __init__(
+        self,
+        gemini_api_key: str,
+        gemini_model: str,
+        session_ttl_seconds: int = 300,
+    ):
         self.client = genai.Client(api_key=gemini_api_key)
         self.model = gemini_model
-        self.chat = self.client.chats.create(
-                        model=self.model,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json",
-                            response_schema=SpeciesIdentification,
-                            temperature=0.1,
-                        ),
-                    )
+        self.session_ttl_seconds = session_ttl_seconds
+        self._chat = None
 
         self.prompt = (
             "Identify the primary biological species present in this image. "
             "Provide accurate taxonomic information, common name, and distinguishing features."
         )
+
+    def _init_chat(self):
+        """Creates a new chat session and resets the timestamp timer."""
+        self._chat = self.client.chats.create(
+            model=self.model,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=SpeciesIdentification,
+                temperature=0.1,
+            ),
+        )
+        self._chat_created_at = time.monotonic()
+
+    def _get_chat(self):
+        """Returns an active chat session, recreating it if expired."""
+        now = time.monotonic()
+        if self._chat is None or (now - self._chat_created_at) >= self.session_ttl_seconds:
+            self._init_chat()
+        return self._chat
 
     def _generate_message_content(self, image_path: Path):
         mime_type, _ = mimetypes.guess_type(image_path)
@@ -74,9 +92,10 @@ class LLMIdentifierPipeline:
         ]
 
     def identify_species(self, image_path: Path) -> SpeciesIdentification:
+        chat = self._get_chat()
         contents = self._generate_message_content(image_path)
         # Send contents (image parts and prompt) via the chat session
-        response = self.chat.send_message(message=contents)
+        response = chat.send_message(message=contents)
         return SpeciesIdentification.model_validate_json(response.text)
 
 def parse_args() -> argparse.Namespace:
