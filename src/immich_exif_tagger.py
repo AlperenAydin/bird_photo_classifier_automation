@@ -118,7 +118,7 @@ def run_local_cycle(pipeline: BirdIdentifierPipeline):
             logging.info(f"Refreshing Immich metadata for {len(updated_ids)} assets...")
             immich_api.trigger_immich_metadata_refresh(updated_ids)
     except Exception as e:
-        logging.info(f"Error during execution: {e}")
+        logging.error(f"Error during execution: {e}", exc_info=True)
 
 
 def run_remote_cycle():
@@ -149,7 +149,7 @@ def run_remote_cycle():
             )
             immich_api.trigger_immich_metadata_refresh(updated_ids)
     except Exception as e:
-        logging.info(f"Error during execution: {e}")
+        logging.error(f"Error during execution: {e}", exc_info=True)
 
 
 def main():
