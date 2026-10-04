@@ -12,6 +12,7 @@ import mimetypes
 import os
 import time
 from pathlib import Path
+from typing import Union
 import sys
 
 from google import genai
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+
 
 class SpeciesIdentification(BaseModel):
     is_organism: bool = Field(
@@ -98,6 +100,36 @@ class LLMIdentifierPipeline:
         response = chat.send_message(message=contents)
         return SpeciesIdentification.model_validate_json(response.text)
 
+    def exif_tags(
+        self,
+        image_source: Union[str, Path],
+        detection_confidence: int,
+        species_identification_confidence: int,
+        *args,
+        **kwargs,
+    ):
+        """Process the image and provides the exif tags to be written"""
+        results = self.identify_species(image_source, *args, **kwargs,)
+        # If there is no creature, we should tag it as such.
+        if not results.is_organism:
+            return {
+                "IPTC:Keywords": "species:no_animal",
+                "XMP:HierarchicalSubject": "Nature|Species|No animal",
+            }
+        # If the confidence level is low, mark it as unidentified
+        if int(results.confidence) < species_identification_confidence:
+            return {
+                "IPTC:Keywords": "species:unidentified_remotely",
+                "XMP:HierarchicalSubject": "Nature|Species|unidentified_remotely",
+            }
+
+        species_name = results.common_name.lower()
+        return {
+            "IPTC:Keywords": f"species:{species_name.replace(' ',"_")}",
+            "XMP:HierarchicalSubject": f"Nature|Species|{species_name.capitalize()}",
+        }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Extract and process a file path passed via command-line flags."
@@ -126,6 +158,7 @@ def main() -> None:
     identification = llm_identifier_pipeline.identify_species(image_path)
     print(identification)
     print(type(identification))
+
 
 if __name__ == "__main__":
     main()

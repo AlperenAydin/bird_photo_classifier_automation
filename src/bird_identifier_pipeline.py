@@ -174,7 +174,7 @@ class BirdIdentifierPipeline:
             results.append(
                 BirdDetectionResult(
                     bbox=bbox,
-                    detection_confidence=det_conf,
+                    detection_confidence=(det_conf * 100.0),
                     top_species=species_predictions,
                 )
             )
@@ -189,7 +189,7 @@ class BirdIdentifierPipeline:
 
         for idx, res in enumerate(results, start=1):
             det_label = (
-                f"{res.detection_confidence * 100:.1f}%"
+                f"{res.detection_confidence:.1f}%"
                 if res.detection_confidence > 0
                 else "Full-image fallback"
             )
@@ -198,6 +198,35 @@ class BirdIdentifierPipeline:
             )
             for rank, (species, prob) in enumerate(res.top_species, start=1):
                 print(f"  {rank}. {species}: {prob:.2f}%")
+                
+    def exif_tags(self, 
+        image_source: Union[str, Path, Image.Image],
+        detection_confidence: int,
+        species_identification_confidence: int,
+        *args, **kwargs):
+        """Process the image and provides the exif tags to be written"""
+        results = self.process_image(image_source, *args, **kwargs)
+        
+        tags = {"IPTC:Keywords": [], "XMP:HierarchicalSubject": []}
+        for r in results:
+            if r.detection_confidence < detection_confidence:
+                continue
+            if r.top_species[0][1] < species_identification_confidence:
+                continue
+
+            species_name = r.top_species[0][0].lower()
+            tags["IPTC:Keywords"].append(f"species:{species_name.replace(' ',"_")}")
+            tags["XMP:HierarchicalSubject"].append(
+                f"Nature|Species|{species_name.capitalize()}"
+            )
+
+        if len(tags["IPTC:Keywords"]) == 0:
+            tags = {
+                "IPTC:Keywords": "species:unidentified_locally",
+                "XMP:HierarchicalSubject": "Nature|Species|unidentified_locally",
+            }
+
+        return tags
 
 
 def parse_args() -> argparse.Namespace:
@@ -234,5 +263,6 @@ if __name__ == "__main__":
     try:
         results = pipeline.process_image(image_path, top_k=3)
         pipeline.print_results(results)
+        print(pipeline.get_exif_tags(image_path, detection_confidence=80, species_identification_confidence=80))
     except FileNotFoundError:
         print(f"File not found: '{image_path}'. Place a test photo to run.")
