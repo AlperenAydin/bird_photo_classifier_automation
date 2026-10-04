@@ -129,10 +129,10 @@ def run_remote_cycle():
         logging.info(
             f"Found {len(unidentified_tagged_assets)} previously unidentified candidate asset(s)."
         )
-        max_assets_to_identify=min(10, len(unidentified_tagged_assets))
-        
+        max_assets_to_identify = min(10, len(unidentified_tagged_assets))
+
         updated_ids = []
-        for asset in unidentified_tagged_assets[max_assets_to_identify]:
+        for asset in unidentified_tagged_assets[:max_assets_to_identify]:
             asset_id = asset["id"]
             original_path = asset.get("originalPath")
 
