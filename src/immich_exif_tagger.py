@@ -93,6 +93,7 @@ def process_images_remotely(pipeline: LLMIdentifierPipeline, file_path: str):
         "IPTC:Keywords": f"species:{species_name.replace(' ',"_")}",
         "XMP:HierarchicalSubject": f"Nature|Species|{species_name.capitalize()}",
     }
+    exif_writer.write_exif_data(file_path, tags)
 
 
 def run_local_cycle(pipeline: BirdIdentifierPipeline):
